@@ -255,21 +255,20 @@
     const toId = s => (s||'').trim().toLowerCase();
 
     // >>> НОВОЕ: нормализация URL пиров (форс HTTPS и /gun), убрали «мертвые» дефолты
-    function normalizePeers(arr){
-      const out = [];
-      for(const u of (arr||[])){
-        try{
-          const url = new URL(u);
-          url.protocol = 'https:'; // на мобильных Mixed Content часто блокируется
-          // гарантируем путь /gun
-          if(!/\/gun\/?$/.test(url.pathname)) url.pathname = (url.pathname.replace(/\/+$/,'') + '/gun');
-          const cleaned = url.toString().replace(/\/+$/,'') + '/gun';
-          out.push(cleaned);
-        }catch{ /* игнор */ }
-      }
-      // уникализируем и сохраняем порядок
-      return Array.from(new Set(out));
-    }
+function normalizePeers(arr){
+  const out = [];
+  for (const u of (arr || [])) {
+    try {
+      const url = new URL(u.trim());
+      // Всегда HTTPS (мобильные режут mixed-content)
+      const origin = (url.protocol === 'https:') ? url.origin : ('https://' + url.host);
+      // Канонический путь — РОВНО один /gun
+      out.push(origin + '/gun');
+    } catch { /* игнор некорректных строк */ }
+  }
+  // уникализируем, сохраняем порядок
+  return Array.from(new Set(out));
+}
 
     // Пиры по умолчанию — только проверенные
     const DEFAULT_PEERS = normalizePeers([
@@ -285,14 +284,14 @@
     }
 
     // Тихий «разогрев» пиров (ускоряет первое соединение на iOS/Android)
-    function warmupPeers(peers){
-      try{
-        peers.forEach(p=>{
-          // Никаких кук/кредов; no-cors+HEAD не ломает CORS-политику
-          fetch(p, { method:'HEAD', mode:'no-cors', cache:'no-store' }).catch(()=>{});
-        });
-      }catch{}
-    }
+ function warmupPeers(peers){
+  try {
+    peers.forEach(p=>{
+      // no-cors, чтобы не споткнуться о CORS при HEAD/GET
+      fetch(p, { method:'GET', mode:'no-cors', cache:'no-store' }).catch(()=>{});
+    });
+  } catch {}
+}
 
     // Инициализация GUN
     function initGun(){
@@ -820,3 +819,4 @@
   </script>
 </body>
 </html>
+
