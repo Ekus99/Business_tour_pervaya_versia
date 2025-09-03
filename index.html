@@ -253,25 +253,31 @@
         .map(n => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[n % 32]).join('');
     const toId = s => (s||'').trim().toLowerCase();
 
-    // Пиры по умолчанию — оставляем публичные; добавьте свои при необходимости
+    // ====== МИНИМАЛЬНЫЕ ПРАВКИ ДЛЯ ANDROID + relay.peer.ooo ======
+    const REQUIRED_PEER = "https://relay.peer.ooo/gun";
+
+    // Пиры по умолчанию — оставляем public, но обязателен REQUIRED_PEER первым
     const DEFAULT_PEERS = [
+      REQUIRED_PEER,
       "https://peer.wallie.io/gun",
-      "https://relay.peer.ooo/gun",
-      "https://gunjs.herokuapp.com/gun",              // совместимость со старыми материалами
-      "https://gun-manhattan.herokuapp.com/gun"      // совместимость (может быть нестабилен)
+      "https://gun-manhattan.herokuapp.com/gun",
+      "https://gunjs.herokuapp.com/gun"
     ];
 
-    // Нормализация и дедупликация пиров
+    // Мягкая нормализация пиров (https и /gun)
     function normalizePeers(list){
-      const norm = (url) => {
+      const out = [];
+      (list||[]).forEach(u=>{
         try{
-          const u = new URL(url.trim());
-          if(u.protocol !== 'https:') u.protocol = 'https:';  // избегаем блокировок mixed content на мобильных
-          if(!u.pathname.endsWith('/gun')) u.pathname = u.pathname.replace(/\/?$/, '/gun');
-          return u.toString();
-        }catch{ return null; }
-      };
-      return Array.from(new Set((list||[]).map(norm).filter(Boolean)));
+          const url = new URL(u.trim());
+          if(url.protocol !== 'https:') url.protocol = 'https:';            // важно для Android (mixed content)
+          if(!url.pathname.endsWith('/gun')) url.pathname = url.pathname.replace(/\/?$/, '/gun');
+          out.push(url.toString());
+        }catch{}
+      });
+      // REQUIRED_PEER всегда в начале
+      const set = new Set([REQUIRED_PEER, ...out]);
+      return Array.from(set);
     }
 
     // Из URL можно передать список пиров
@@ -281,46 +287,32 @@
       return normalizePeers(p.split(','));
     }
 
-    // Глобальные ссылки на gun и корень БД (перевязываются при смене пиров)
-    let gun = null;
-    let DB  = null;
-
-    // Инициализация GUN (c WebRTC/ICE для мобильных)
+    // Инициализация GUN
     function initGun(){
       const saved = (localStorage.getItem('gun_peers') || '').trim();
       const fromUrl = peersFromURL();
       const peers = normalizePeers(fromUrl && fromUrl.length ? fromUrl :
-                     (saved ? saved.split(',') : DEFAULT_PEERS));
-
+                    (saved ? saved.split(',').map(s=>s.trim()).filter(Boolean) : DEFAULT_PEERS));
       dqs('#peers-list').textContent = peers.join(', ');
 
-      const g = Gun({
-        peers,
-        localStorage: true,
-        radisk: true,
-        axe: true,               // устойчивые граф-операции под нагрузкой
-        retry: 1500,
-        // ВАЖНО: WebRTC-мэш для браузеров/мобильных
-        rtc: {
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:global.stun.twilio.com:3478?transport=udp" },
-            { urls: "stun:stun.cloudflare.com:3478" }
-          ],
-          // мобильные сети любят покороче таймауты
-          iceTransportPolicy: "all"
-        }
-      });
-
+      // ВКЛ: axe для устойчивости, retry — для пере-коннекта; radisk/localStorage — как было
+      const g = Gun({ peers, localStorage: true, radisk: true, retry: 1500, axe: true });
       wirePeerIndicators(g);
-
-      // Перевязываем глобальные ссылки
-      gun = g;
-      DB  = gun.get('polls');
-
       return g;
     }
-    initGun();
+    let gun = initGun();
+    const DB = gun.get('polls');
+
+    // Keep-alive (Android может «усыплять» неактивные WS)
+    setInterval(()=> {
+      try{ DB.get('~keepalive').put(Date.now()); }catch{}
+    }, 25000);
+    document.addEventListener('visibilitychange', ()=>{
+      if(!document.hidden){
+        try{ DB.get('~keepalive').put(Date.now()); }catch{}
+      }
+    });
+    // ====== /МИНИМАЛЬНЫЕ ПРАВКИ ======
 
     // Индикаторы соединения с пирами (hi/bye)
     function wirePeerIndicators(g){
@@ -328,14 +320,13 @@
       function pill(text, ok=true){
         const s = document.createElement('span'); s.className = 'badge '+(ok?'ok':'err'); s.textContent = text; return s;
       }
-      g.on('hi', peer=>{
-        const id = (peer && (peer.url || peer.id)) || 'peer';
-        const el = pill('подключено: '+id);
-        el.dataset.peer = id;
+      g.on('hi', peer=>{ // новый коннект
+        const el = pill('подключено: '+(peer.url||peer.id||'peer'));
+        el.dataset.peer = peer.url||peer.id||'peer';
         box.appendChild(el);
       });
-      g.on('bye', peer=>{
-        const id = (peer && (peer.url || peer.id)) || 'peer';
+      g.on('bye', peer=>{ // отключение
+        const id = peer.url||peer.id||'peer';
         box.querySelectorAll(`[data-peer="${CSS.escape(id)}"]`).forEach(e=>e.remove());
         const el = pill('отключено: '+id, false);
         box.appendChild(el); setTimeout(()=>el.remove(), 4000);
@@ -359,14 +350,19 @@
     dqs('#save-peers').addEventListener('click', ()=>{
       const val = dqs('#peer-input').value.trim();
       localStorage.setItem('gun_peers', val);
-      initGun();                              // DB перевяжется внутри
+      gun = initGun();
     });
     dqs('#reset-peers').addEventListener('click', ()=>{
       localStorage.removeItem('gun_peers'); dqs('#peer-input').value = '';
-      initGun();
+      gun = initGun();
     });
     dqs('#preset-peers').addEventListener('click', ()=>{
-      const add = DEFAULT_PEERS;
+      const add = [
+        REQUIRED_PEER,
+        "https://peer.wallie.io/gun",
+        "https://gun-manhattan.herokuapp.com/gun",
+        "https://gunjs.herokuapp.com/gun"
+      ];
       const cur = dqs('#peer-input').value.trim();
       const merged = normalizePeers((cur?cur.split(','):[]).concat(add));
       dqs('#peer-input').value = merged.join(',');
@@ -461,7 +457,7 @@
       dqs('#copy-share').onclick = ()=> copyText(share, 'Ссылка скопирована');
       dqs('#open-voter-link').onclick = ()=> (location.href = share + '#voter');
 
-      dqs('#codes-table').addEventListener('click', (e)=>{
+      tb.addEventListener('click', (e)=>{
         const btn = e.target.closest('.copy-code'); if(!btn) return;
         const code = btn.dataset.code, pid = btn.dataset.poll;
         const link = `${base}?poll=${pid}&code=${code}#voter`;
@@ -514,6 +510,7 @@
       const meta = await waitForMeta(pollRef, 9000);
       if(!meta){
         setVStatus('Опрос пока не найден. Проверьте ID и пиры. Мы продолжаем пытаться…', true);
+        // продолжаем слушать — если мета приедет позже, UI обновится
       } else {
         voterState.title = meta.title || 'Опрос';
         dqs('#v-q').textContent = voterState.title;
@@ -523,6 +520,7 @@
       const limit = await waitForLimit(pollRef, code, 9000);
       if(limit == null){
         setVStatus('Код не найден на текущих пирах. Убедитесь, что подключены те же пиры, или попробуйте ещё раз.', true);
+        // не выходим: если лимит появится — продолжим
       } else {
         voterState.limit = parseInt(limit||0,10)||0;
         voterState.pollId = pollId; voterState.code = code;
@@ -621,7 +619,7 @@
       dqs('#v-left').textContent = Math.max(0, voterState.limit - totalAllocated());
     }
 
-    // Запись голоса
+    // Запись голоса: КАЖДЫЙ вариант — отдельный узел; submitted — отдельно (устойчивый CRDT)
     function submitVote(){
       if(voterState.submitted){ alert('Ваш голос уже учтён'); return; }
       const sum = totalAllocated();
