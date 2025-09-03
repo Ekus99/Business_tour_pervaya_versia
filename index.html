@@ -3,15 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Онлайн-опросник с монетами • GUN.js (P2P)</title>
+  <title>Опросник с монетами • GUN.js (надёжная синхронизация)</title>
 
-  <!-- GUN: P2P-граф без ваших серверов -->
-  <script src="https://cdn.jsdelivr.net/npm/gun/gun.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gun/sea.min.js"></script>
-  <!-- ВАЖНО: убрали webrtc.js, чтобы мобильные не зависали на RTC-коннектах -->
-  <!-- <script src="https://cdn.jsdelivr.net/npm/gun/lib/webrtc.js"></script> -->
+  <!-- Библиотеки: фиксированные версии -->
+  <script src="https://cdn.jsdelivr.net/npm/gun@0.2020.520/gun.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gun@0.2020.520/sea.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gun@0.2020.520/lib/axe.min.js"></script>
+  <!-- WebRTC не подключаем: мобильные часто «залипают» на RTC без сигнального сервера -->
 
-  <!-- Chart.js подключим лениво (по требованию) -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 
@@ -82,7 +81,7 @@
         <div class="logo"></div>
         <div>
           <h1>Опросник с монетами · GUN.js</h1>
-          <div class="small ghost">Три вкладки · P2P синхронизация · Один статический файл</div>
+          <div class="small ghost">Организатор · Голосующий · Итоги · P2P-синхронизация</div>
           <div id="conn" class="conn small"></div>
         </div>
       </div>
@@ -97,12 +96,9 @@
     <section id="tab-org" class="grid">
       <div class="card">
         <h2>Создать новый опрос</h2>
-        <div class="row">
-          <div>
-            <label>Текст вопроса</label>
-            <input type="text" id="org-question" placeholder="Например: Кого выбрать лидером проекта?" />
-          </div>
-        </div>
+
+        <label>Текст вопроса</label>
+        <input type="text" id="org-question" placeholder="Например: Кого выбрать лидером проекта?" />
 
         <h3>Варианты ответа</h3>
         <div id="options" class="tag-inputs"></div>
@@ -120,11 +116,11 @@
 
         <div class="spaced" style="margin-top:16px">
           <button class="btn" id="create-poll">Создать опрос</button>
-          <div class="small muted">Коды создаются автоматически</div>
+          <div class="small muted">Коды генерируются автоматически</div>
         </div>
 
         <div id="after-create" class="hidden">
-          <h3>Коды доступа для голосующих</h3>
+          <h3>Коды доступа</h3>
           <table class="table" id="codes-table">
             <thead><tr><th>Участник</th><th>Монет</th><th>Код</th><th></th></tr></thead>
             <tbody></tbody>
@@ -132,7 +128,7 @@
 
           <div class="spaced" style="margin-top:14px">
             <div>
-              <div class="small muted">Ссылка на опрос (для рассылки голосующим)</div>
+              <div class="small muted">Ссылка на опрос (для рассылки)</div>
               <div class="code mono" id="share-link"></div>
             </div>
             <div class="row" style="max-width:360px">
@@ -141,14 +137,14 @@
             </div>
           </div>
 
-          <div class="notice">Храните коды в секрете: по каждому коду можно проголосовать один раз.</div>
+          <div class="notice">По каждому коду можно проголосовать один раз.</div>
         </div>
       </div>
 
       <div class="card">
-        <h2>Дополнительно</h2>
-        <label>Пиры GUN (через запятую). Можно передать и через URL: <span class="mono">?peers=https://a/gun,https://b/gun</span></label>
-        <input type="text" id="peer-input" placeholder="https://peer1.example/gun, https://peer2.example/gun" />
+        <h2>Пиры</h2>
+        <label>Список пиров (через запятую) или передайте через URL: <span class="mono">?peers=https://a/gun,https://b/gun</span></label>
+        <input type="text" id="peer-input" placeholder="https://relay.peer.ooo/gun, https://peer.wallie.io/gun" />
         <div class="row" style="margin-top:8px">
           <button class="btn secondary" id="save-peers">Сохранить пиры</button>
           <button class="btn secondary" id="reset-peers">Сбросить к умолчанию</button>
@@ -183,7 +179,7 @@
           <div class="pill">Ваш лимит: <span id="v-limit">0</span> монет</div>
         </div>
         <div class="chips" id="v-legend"></div>
-        <div class="notice">Распределите монеты по вариантам. Нельзя превысить лимит. Можно проголосовать меньше лимита.</div>
+        <div class="notice">Распределите монеты по вариантам. Нельзя превысить лимит.</div>
         <div id="vote-options" class="list" style="margin-top:10px"></div>
         <div class="spaced" style="margin-top:12px">
           <div class="pill">Осталось: <span id="v-left">0</span></div>
@@ -195,8 +191,8 @@
       <div class="card">
         <h2>Быстрые ссылки</h2>
         <div class="row">
-          <button class="btn secondary" id="goto-results">Перейти к итогам</button>
-          <button class="btn secondary" id="copy-my-link">Скопировать мою персональную ссылку</button>
+          <button class="btn secondary" id="goto-results">К итогам</button>
+          <button class="btn secondary" id="copy-my-link">Моя персональная ссылка</button>
         </div>
         <div class="small muted" id="my-link" style="margin-top:8px"></div>
       </div>
@@ -206,17 +202,17 @@
     <section id="tab-results" class="grid hidden">
       <div class="card">
         <div class="spaced">
-          <h2>Итоги голосования (реальное время)</h2>
+          <h2>Итоги (реальное время)</h2>
           <div class="row" style="max-width:460px">
             <input type="text" id="r-poll" placeholder="ID опроса (например, abcd123)" />
             <button class="btn" id="r-load">Загрузить</button>
           </div>
         </div>
-        <div class="notice small">Один и тот же результат виден на всех устройствах при соединении с теми же пирами.</div>
+        <div class="notice small">Результаты одинаковы на всех устройствах при подключении к тем же пирами.</div>
 
         <div class="row" style="margin-top:12px">
           <div class="pill">Опрос: <span id="r-title" class="mono">—</span></div>
-          <div class="pill">Участников проголосовало: <span id="r-voters" class="mono">0</span></div>
+          <div class="pill">Проголосовало: <span id="r-voters" class="mono">0</span></div>
         </div>
 
         <div style="margin-top:14px">
@@ -231,10 +227,10 @@
       </div>
 
       <div class="card">
-        <h2>Поделиться результатами</h2>
+        <h2>Поделиться</h2>
         <div class="row">
           <button class="btn secondary" id="r-copy">Скопировать ссылку на итоги</button>
-          <button class="btn secondary" id="r-open">Открыть в этом окне</button>
+          <button class="btn secondary" id="r-open">Открыть здесь</button>
         </div>
         <div class="small muted" id="r-link" style="margin-top:8px"></div>
       </div>
@@ -243,102 +239,20 @@
 
   <script>
     /**********************
-     * УТИЛИТЫ / ПАРАМЕТРЫ
+     * УТИЛИТЫ / ОБЩЕЕ
      **********************/
     const dqs = s => document.querySelector(s);
     const dqsa = s => Array.from(document.querySelectorAll(s));
     const $$ = (parent, sel) => Array.from(parent.querySelectorAll(sel));
     const randId = (len=7) => [...crypto.getRandomValues(new Uint8Array(len))]
-        .map(n => "abcdefghijklmnopqrstuvwxyz0123456789"[n % 36]).join('');
+      .map(n => "abcdefghijklmnopqrstuvwxyz0123456789"[n % 36]).join('');
     const randCode = (len=6) => [...crypto.getRandomValues(new Uint8Array(len))]
-        .map(n => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[n % 32]).join('');
+      .map(n => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[n % 32]).join('');
     const toId = s => (s||'').trim().toLowerCase();
+    const clamp = (min,max,x)=> Math.max(min, Math.min(max, x));
+    function escapeHTML(s){ return (s||'').replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
 
-    // >>> НОВОЕ: нормализация URL пиров (форс HTTPS и /gun), убрали «мертвые» дефолты
-function normalizePeers(arr){
-  const out = [];
-  for (const u of (arr || [])) {
-    try {
-      const url = new URL(u.trim());
-      // Всегда HTTPS (мобильные режут mixed-content)
-      const origin = (url.protocol === 'https:') ? url.origin : ('https://' + url.host);
-      // Канонический путь — РОВНО один /gun
-      out.push(origin + '/gun');
-    } catch { /* игнор некорректных строк */ }
-  }
-  // уникализируем, сохраняем порядок
-  return Array.from(new Set(out));
-}
-
-    // Пиры по умолчанию — только проверенные
-    const DEFAULT_PEERS = normalizePeers([
-      "https://peer.wallie.io/gun",
-      "https://relay.peer.ooo/gun"
-    ]);
-
-    // Из URL можно передать список пиров
-    function peersFromURL(){
-      const p = new URLSearchParams(location.search).get('peers');
-      if(!p) return null;
-      return normalizePeers(p.split(',').map(s=>s.trim()).filter(Boolean));
-    }
-
-    // Тихий «разогрев» пиров (ускоряет первое соединение на iOS/Android)
- function warmupPeers(peers){
-  try {
-    peers.forEach(p=>{
-      // no-cors, чтобы не споткнуться о CORS при HEAD/GET
-      fetch(p, { method:'GET', mode:'no-cors', cache:'no-store' }).catch(()=>{});
-    });
-  } catch {}
-}
-
-    // Инициализация GUN
-    function initGun(){
-      const saved = (localStorage.getItem('gun_peers') || '').trim();
-      const fromUrl = peersFromURL();
-      const peersRaw = (fromUrl && fromUrl.length ? fromUrl :
-                       (saved ? saved.split(',').map(s=>s.trim()).filter(Boolean) : DEFAULT_PEERS));
-      const peers = normalizePeers(peersRaw);
-
-      dqs('#peers-list').textContent = peers.join(', ');
-      warmupPeers(peers);
-
-      // webrtc отключен (плагин не подключаем), работаем через WSS/long-polling
-      const g = Gun({
-        peers,
-        localStorage: true,
-        radisk: true,
-        retry: 2000,   // быстрее переподключаемся на мобильных
-        // wait: 1500, // можно включить, если нужно «дождаться пиров» перед flush
-      });
-      wirePeerIndicators(g);
-      return g;
-    }
-    let gun = initGun();
-    const DB = gun.get('polls');
-
-    // Индикаторы соединения с пирами (hi/bye)
-    function wirePeerIndicators(g){
-      const box = dqs('#conn');
-      function pill(text, ok=true){
-        const s = document.createElement('span'); s.className = 'badge '+(ok?'ok':'err'); s.textContent = text; return s;
-      }
-      g.on('hi', peer=>{
-        const id = peer?.url || peer?.id || 'peer';
-        const el = pill('подключено: '+id);
-        el.dataset.peer = id;
-        box.appendChild(el);
-      });
-      g.on('bye', peer=>{
-        const id = peer?.url || peer?.id || 'peer';
-        box.querySelectorAll(`[data-peer="${CSS.escape(id)}"]`).forEach(e=>e.remove());
-        const el = pill('отключено: '+id, false);
-        box.appendChild(el); setTimeout(()=>el.remove(), 4000);
-      });
-    }
-
-    // Табы
+    // Вкладки
     const tabs = { org: dqs('#tab-org'), voter: dqs('#tab-voter'), results: dqs('#tab-results') };
     dqsa('.tab-btn').forEach(btn=>{
       btn.addEventListener('click', ()=>{
@@ -351,7 +265,75 @@ function normalizePeers(arr){
       });
     });
 
-    // Настройка пиров
+    // Нормализация пиров: HTTPS и ровно один /gun
+    function normalizePeers(arr){
+      const out = [];
+      for (const u of (arr||[])) {
+        if (!u) continue;
+        try {
+          const url = new URL(u.trim());
+          const origin = (url.protocol === 'https:') ? url.origin : ('https://' + url.host);
+          let path = url.pathname || '/';
+          if (!/\/gun\/?$/.test(path)) {
+            path = (path.endsWith('/') ? path.slice(0,-1) : path) + '/gun';
+          }
+          out.push(origin + path);
+        } catch { /* игнор */ }
+      }
+      return Array.from(new Set(out));
+    }
+
+    // Дефолт — только ваши два пира
+    const DEFAULT_PEERS = normalizePeers([
+      "https://relay.peer.ooo/gun",
+      "https://peer.wallie.io/gun"
+    ]);
+
+    function peersFromURL(){
+      const p = new URLSearchParams(location.search).get('peers');
+      if(!p) return null;
+      return normalizePeers(p.split(',').map(s=>s.trim()).filter(Boolean));
+    }
+
+    // Индикаторы подключений
+    function wirePeerIndicators(g){
+      const box = dqs('#conn');
+      function pill(text, ok=true){
+        const s = document.createElement('span'); s.className = 'badge '+(ok?'ok':'err'); s.textContent = text; return s;
+      }
+      g.on('hi', peer=>{
+        const id = peer?.url || peer?.id || 'peer';
+        const el = pill('подключено: '+id); el.dataset.peer = id; box.appendChild(el);
+      });
+      g.on('bye', peer=>{
+        const id = peer?.url || peer?.id || 'peer';
+        box.querySelectorAll(`[data-peer="${CSS.escape(id)}"]`).forEach(e=>e.remove());
+        const el = pill('отключено: '+id, false); box.appendChild(el); setTimeout(()=>el.remove(), 4000);
+      });
+    }
+
+    // Инициализация GUN
+    function initGun(){
+      const saved = (localStorage.getItem('gun_peers') || '').trim();
+      const fromUrl = peersFromURL();
+      const peersRaw = (fromUrl && fromUrl.length ? fromUrl :
+                       (saved ? saved.split(',').map(s=>s.trim()).filter(Boolean) : DEFAULT_PEERS));
+      const peers = normalizePeers(peersRaw);
+      dqs('#peers-list').textContent = peers.join(', ');
+
+      const g = Gun({
+        peers,
+        localStorage: true,
+        radisk: true,
+        retry: 2000
+      });
+      wirePeerIndicators(g);
+      return g;
+    }
+    let gun = initGun();
+    const DB = gun.get('polls');
+
+    // Настройка пиров из UI
     dqs('#save-peers').addEventListener('click', ()=>{
       const val = dqs('#peer-input').value.trim();
       localStorage.setItem('gun_peers', val);
@@ -362,13 +344,9 @@ function normalizePeers(arr){
       gun = initGun();
     });
     dqs('#preset-peers').addEventListener('click', ()=>{
-      const add = [
-        "https://peer.wallie.io/gun",
-        "https://relay.peer.ooo/gun"
-      ];
+      const add = DEFAULT_PEERS;
       const cur = dqs('#peer-input').value.trim();
       const merged = Array.from(new Set((cur?cur.split(','):[]).concat(add))).map(s=>s.trim()).filter(Boolean);
-      // нормализуем перед показом
       dqs('#peer-input').value = normalizePeers(merged).join(',');
     });
 
@@ -401,12 +379,13 @@ function normalizePeers(arr){
       line.querySelector('button').onclick = () => line.remove();
       participantsBox.appendChild(line);
     }
+
     dqs('#add-option').onclick = ()=> addOption('');
     dqs('#clear-options').onclick = ()=> optionsBox.innerHTML = '';
     dqs('#add-participant').onclick = ()=> addParticipant('', '');
     dqs('#clear-participants').onclick = ()=> participantsBox.innerHTML = '';
 
-    // Стартовые поля
+    // Стартовые заготовки
     ['А','Б','В'].forEach((_,i)=>addOption(`Вариант ${i+1}`));
     ['Анна','Борис','Светлана'].forEach((n)=>addParticipant(n, 10));
 
@@ -426,7 +405,7 @@ function normalizePeers(arr){
       const pollRef = DB.get(pollId);
       const createdAt = Date.now();
 
-      // Пишем мету — ключевое для обнаружения опроса на других устройствах
+      // Метаданные опроса
       pollRef.get('meta').put({ title: question, createdAt, status: 'open' });
 
       // Варианты
@@ -510,21 +489,19 @@ function normalizePeers(arr){
 
       const pollRef = DB.get(pollId);
 
-      // 1) Ждём мету опроса с подпиской и запасом времени
+      // Ждём мету
       const meta = await waitForMeta(pollRef, 9000);
-      if(!meta){
-        setVStatus('Опрос пока не найден. Проверьте ID и пиры. Мы продолжаем пытаться…', true);
-        // продолжаем слушать — если мета приедет позже, UI обновится
-      } else {
+      if(meta){
         voterState.title = meta.title || 'Опрос';
         dqs('#v-q').textContent = voterState.title;
+      } else {
+        setVStatus('Опрос не найден на подключённых пирах. Проверьте ID/пиры.', true);
       }
 
-      // 2) Проверяем код/лимит (тоже ждём с подпиской)
+      // Ждём лимит по коду
       const limit = await waitForLimit(pollRef, code, 9000);
       if(limit == null){
-        setVStatus('Код не найден на текущих пирах. Убедитесь, что подключены те же пиры, или попробуйте ещё раз.', true);
-        // не выходим: если лимит появится — продолжим
+        setVStatus('Код не найден на текущих пирах. Убедитесь, что пиры совпадают.', true);
       } else {
         voterState.limit = parseInt(limit||0,10)||0;
         voterState.pollId = pollId; voterState.code = code;
@@ -534,25 +511,26 @@ function normalizePeers(arr){
         localStorage.setItem('v_last', JSON.stringify({pollId, code}));
       }
 
-      // 3) Флаг submitted
+      // Флаг submitted
       pollRef.get('submissions').get(code).get('submitted').on(flag=>{
         voterState.submitted = !!flag;
         dqs('#v-already').classList.toggle('hidden', !voterState.submitted);
       });
 
-      // 4) Варианты — подписка
+      // Варианты — подписка
       voterState.options = [];
       pollRef.get('options').map().on((o, k)=>{
         if(!o || !o.text) return;
         const id = o.id || k;
-        const exist = voterState.options.find(x=>x.id===id);
-        if(!exist){ voterState.options.push({id, text:o.text}); schedule(renderVotingUI); }
+        if(!voterState.options.find(x=>x.id===id)){
+          voterState.options.push({id, text:o.text});
+          schedule(renderVotingUI);
+        }
       });
 
       dqs('#voting-card').classList.remove('hidden');
     }
 
-    // Ожидание метаданных (надёжное «обнаружение» опроса)
     function waitForMeta(pollRef, timeoutMs=8000){
       return new Promise(resolve=>{
         let done=false; const t = setTimeout(()=>{ if(!done){ done=true; resolve(null);} }, timeoutMs);
@@ -562,7 +540,6 @@ function normalizePeers(arr){
         });
       });
     }
-    // Ожидание участника/лимита по коду
     function waitForLimit(pollRef, code, timeoutMs=8000){
       return new Promise(resolve=>{
         let done=false; const t = setTimeout(()=>{ if(!done){ done=true; resolve(null);} }, timeoutMs);
@@ -613,7 +590,6 @@ function normalizePeers(arr){
 
       updateLeft();
     }
-
     function totalAllocated(){ return Object.values(voterState.allocations).reduce((a,b)=>a+(parseInt(b||0,10)||0),0); }
     function totalAllocatedExcept(id){
       return Object.entries(voterState.allocations).filter(([k])=>k!==id)
@@ -623,7 +599,6 @@ function normalizePeers(arr){
       dqs('#v-left').textContent = Math.max(0, voterState.limit - totalAllocated());
     }
 
-    // Запись голоса
     function submitVote(){
       if(voterState.submitted){ alert('Ваш голос уже учтён'); return; }
       const sum = totalAllocated();
@@ -667,10 +642,8 @@ function normalizePeers(arr){
       const pollRef = DB.get(pollId);
       pollRef.get('meta').on(meta=>{ dqs('#r-title').textContent = meta?.title || '—'; });
 
-      // Состояние
       const state = { options:{}, submissions:{}, submittedFlag:{} };
 
-      // Опции
       const optMap = pollRef.get('options');
       optMap.map().on((o, k)=>{
         if(!o) return;
@@ -678,7 +651,6 @@ function normalizePeers(arr){
       });
       resultWatch.offFns.push(()=> optMap.map().off());
 
-      // Анкеты
       const subsMap = pollRef.get('submissions');
       subsMap.map().on((sub, code)=>{
         if(!code) return;
@@ -693,14 +665,12 @@ function normalizePeers(arr){
       });
       resultWatch.offFns.push(()=> subsMap.map().off());
 
-      // Линки
       const base = location.origin + location.pathname;
       const link = `${base}?poll=${pollId}#results`;
       dqs('#r-link').textContent = link;
       dqs('#r-copy').onclick = ()=> copyText(link, 'Ссылка на результаты скопирована');
       dqs('#r-open').onclick = ()=> (location.href = link);
 
-      // Ленивая загрузка Chart.js
       if(!ChartLibLoaded){
         await loadScript('https://cdn.jsdelivr.net/npm/chart.js');
         ChartLibLoaded = true;
@@ -720,7 +690,6 @@ function normalizePeers(arr){
         ids.forEach(id=> totals[id] += parseInt((vmap && vmap[id]) || 0, 10) || 0);
       });
 
-      // Таблица
       const tbody = dqs('#r-table tbody'); tbody.innerHTML = '';
       ids.forEach(id=>{
         const tr = document.createElement('tr');
@@ -729,9 +698,9 @@ function normalizePeers(arr){
       });
       dqs('#r-voters').textContent = votedCount;
 
-      // Диаграмма
       const data = ids.map(id => totals[id]);
       if(!chart){
+        // Chart.js уже подхвачен лениво
         chart = new Chart(chartCtx, {
           type: 'bar',
           data: { labels, datasets: [{ label: 'Голоса', data }] },
@@ -743,17 +712,9 @@ function normalizePeers(arr){
     }
 
     /**********************
-     * ОБЩЕЕ / ХЕЛПЕРЫ
+     * ХЕЛПЕРЫ
      **********************/
-    function openTab(key){
-      dqsa('.tab-btn').forEach(b=>{
-        b.classList.toggle('active', b.dataset.tab===key);
-        b.setAttribute('aria-selected', b.dataset.tab===key ? 'true' : 'false');
-      });
-      Object.entries(tabs).forEach(([k,el])=> el.classList.toggle('hidden', k!==key));
-    }
-
-    function copyText(text, toast='Скопировано'){
+    function copyText(text){
       navigator.clipboard.writeText(text).catch(()=>{
         const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select();
         try{ document.execCommand('copy'); } catch {}
@@ -761,10 +722,6 @@ function normalizePeers(arr){
       });
     }
 
-    function escapeHTML(s){ return (s||'').replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c])); }
-    const clamp = (min,max,x)=> Math.max(min, Math.min(max, x));
-
-    // schedule: объединяем частые перерисовки в один кадр
     let rafId=null, queue=[];
     function schedule(fn){
       queue.push(fn);
@@ -779,6 +736,14 @@ function normalizePeers(arr){
       return new Promise((resolve,reject)=>{
         const s = document.createElement('script'); s.src = src; s.onload=resolve; s.onerror=reject; document.head.appendChild(s);
       });
+    }
+
+    function openTab(key){
+      dqsa('.tab-btn').forEach(b=>{
+        b.classList.toggle('active', b.dataset.tab===key);
+        b.setAttribute('aria-selected', b.dataset.tab===key ? 'true' : 'false');
+      });
+      Object.entries(tabs).forEach(([k,el])=> el.classList.toggle('hidden', k!==key));
     }
 
     // Bootstrap из URL
@@ -801,14 +766,11 @@ function normalizePeers(arr){
       const quick = params.get('autoconnect');
       if(poll && code && (hash==='voter' || quick==='1')) setTimeout(()=> connectAsVoter(), 200);
 
-      // Подхват предыдущего логина
-      if(!poll || !code){
-        try{
-          const vlast = JSON.parse(localStorage.getItem('v_last')||'{}');
-          if(vlast.pollId && !poll) dqs('#v-poll').value = vlast.pollId;
-          if(vlast.code && !code) dqs('#v-code').value = vlast.code;
-        }catch{}
-      }
+      try{
+        const vlast = JSON.parse(localStorage.getItem('v_last')||'{}');
+        if(!poll && vlast.pollId) dqs('#v-poll').value = vlast.pollId;
+        if(!code && vlast.code) dqs('#v-code').value = vlast.code;
+      }catch{}
     })();
 
     // Подсказка организатору
@@ -819,4 +781,3 @@ function normalizePeers(arr){
   </script>
 </body>
 </html>
-
