@@ -8,7 +8,8 @@
   <!-- GUN: P2P-граф без ваших серверов -->
   <script src="https://cdn.jsdelivr.net/npm/gun/gun.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/gun/sea.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gun/lib/webrtc.js"></script>
+  <!-- ВАЖНО: убрали webrtc.js, чтобы мобильные не зависали на RTC-коннектах -->
+  <!-- <script src="https://cdn.jsdelivr.net/npm/gun/lib/webrtc.js"></script> -->
 
   <!-- Chart.js подключим лениво (по требованию) -->
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -253,66 +254,70 @@
         .map(n => "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"[n % 32]).join('');
     const toId = s => (s||'').trim().toLowerCase();
 
-    // ====== МИНИМАЛЬНЫЕ ПРАВКИ ДЛЯ ANDROID + relay.peer.ooo ======
-    const REQUIRED_PEER = "https://relay.peer.ooo/gun";
-
-    // Пиры по умолчанию — оставляем public, но обязателен REQUIRED_PEER первым
-    const DEFAULT_PEERS = [
-      REQUIRED_PEER,
-      "https://peer.wallie.io/gun",
-      "https://gun-manhattan.herokuapp.com/gun",
-      "https://gunjs.herokuapp.com/gun"
-    ];
-
-    // Мягкая нормализация пиров (https и /gun)
-    function normalizePeers(list){
+    // >>> НОВОЕ: нормализация URL пиров (форс HTTPS и /gun), убрали «мертвые» дефолты
+    function normalizePeers(arr){
       const out = [];
-      (list||[]).forEach(u=>{
+      for(const u of (arr||[])){
         try{
-          const url = new URL(u.trim());
-          if(url.protocol !== 'https:') url.protocol = 'https:';            // важно для Android (mixed content)
-          if(!url.pathname.endsWith('/gun')) url.pathname = url.pathname.replace(/\/?$/, '/gun');
-          out.push(url.toString());
-        }catch{}
-      });
-      // REQUIRED_PEER всегда в начале
-      const set = new Set([REQUIRED_PEER, ...out]);
-      return Array.from(set);
+          const url = new URL(u);
+          url.protocol = 'https:'; // на мобильных Mixed Content часто блокируется
+          // гарантируем путь /gun
+          if(!/\/gun\/?$/.test(url.pathname)) url.pathname = (url.pathname.replace(/\/+$/,'') + '/gun');
+          const cleaned = url.toString().replace(/\/+$/,'') + '/gun';
+          out.push(cleaned);
+        }catch{ /* игнор */ }
+      }
+      // уникализируем и сохраняем порядок
+      return Array.from(new Set(out));
     }
+
+    // Пиры по умолчанию — только проверенные
+    const DEFAULT_PEERS = normalizePeers([
+      "https://peer.wallie.io/gun",
+      "https://relay.peer.ooo/gun"
+    ]);
 
     // Из URL можно передать список пиров
     function peersFromURL(){
       const p = new URLSearchParams(location.search).get('peers');
       if(!p) return null;
-      return normalizePeers(p.split(','));
+      return normalizePeers(p.split(',').map(s=>s.trim()).filter(Boolean));
+    }
+
+    // Тихий «разогрев» пиров (ускоряет первое соединение на iOS/Android)
+    function warmupPeers(peers){
+      try{
+        peers.forEach(p=>{
+          // Никаких кук/кредов; no-cors+HEAD не ломает CORS-политику
+          fetch(p, { method:'HEAD', mode:'no-cors', cache:'no-store' }).catch(()=>{});
+        });
+      }catch{}
     }
 
     // Инициализация GUN
     function initGun(){
       const saved = (localStorage.getItem('gun_peers') || '').trim();
       const fromUrl = peersFromURL();
-      const peers = normalizePeers(fromUrl && fromUrl.length ? fromUrl :
-                    (saved ? saved.split(',').map(s=>s.trim()).filter(Boolean) : DEFAULT_PEERS));
-      dqs('#peers-list').textContent = peers.join(', ');
+      const peersRaw = (fromUrl && fromUrl.length ? fromUrl :
+                       (saved ? saved.split(',').map(s=>s.trim()).filter(Boolean) : DEFAULT_PEERS));
+      const peers = normalizePeers(peersRaw);
 
-      // ВКЛ: axe для устойчивости, retry — для пере-коннекта; radisk/localStorage — как было
-      const g = Gun({ peers, localStorage: true, radisk: true, retry: 1500, axe: true });
+      dqs('#peers-list').textContent = peers.join(', ');
+      warmupPeers(peers);
+
+      // webrtc отключен (плагин не подключаем), работаем через WSS/long-polling
+      const g = Gun({
+        peers,
+        localStorage: true,
+        radisk: true,
+        retry: 2000,   // быстрее переподключаемся на мобильных
+        // wait: 1500, // можно включить, если нужно «дождаться пиров» перед flush
+      });
       wirePeerIndicators(g);
       return g;
     }
     let gun = initGun();
     const DB = gun.get('polls');
-
-    // Keep-alive (Android может «усыплять» неактивные WS)
-    setInterval(()=> {
-      try{ DB.get('~keepalive').put(Date.now()); }catch{}
-    }, 25000);
-    document.addEventListener('visibilitychange', ()=>{
-      if(!document.hidden){
-        try{ DB.get('~keepalive').put(Date.now()); }catch{}
-      }
-    });
-    // ====== /МИНИМАЛЬНЫЕ ПРАВКИ ======
 
     // Индикаторы соединения с пирами (hi/bye)
     function wirePeerIndicators(g){
@@ -320,13 +325,14 @@
       function pill(text, ok=true){
         const s = document.createElement('span'); s.className = 'badge '+(ok?'ok':'err'); s.textContent = text; return s;
       }
-      g.on('hi', peer=>{ // новый коннект
-        const el = pill('подключено: '+(peer.url||peer.id||'peer'));
-        el.dataset.peer = peer.url||peer.id||'peer';
+      g.on('hi', peer=>{
+        const id = peer?.url || peer?.id || 'peer';
+        const el = pill('подключено: '+id);
+        el.dataset.peer = id;
         box.appendChild(el);
       });
-      g.on('bye', peer=>{ // отключение
-        const id = peer.url||peer.id||'peer';
+      g.on('bye', peer=>{
+        const id = peer?.url || peer?.id || 'peer';
         box.querySelectorAll(`[data-peer="${CSS.escape(id)}"]`).forEach(e=>e.remove());
         const el = pill('отключено: '+id, false);
         box.appendChild(el); setTimeout(()=>el.remove(), 4000);
@@ -358,14 +364,13 @@
     });
     dqs('#preset-peers').addEventListener('click', ()=>{
       const add = [
-        REQUIRED_PEER,
         "https://peer.wallie.io/gun",
-        "https://gun-manhattan.herokuapp.com/gun",
-        "https://gunjs.herokuapp.com/gun"
+        "https://relay.peer.ooo/gun"
       ];
       const cur = dqs('#peer-input').value.trim();
-      const merged = normalizePeers((cur?cur.split(','):[]).concat(add));
-      dqs('#peer-input').value = merged.join(',');
+      const merged = Array.from(new Set((cur?cur.split(','):[]).concat(add))).map(s=>s.trim()).filter(Boolean);
+      // нормализуем перед показом
+      dqs('#peer-input').value = normalizePeers(merged).join(',');
     });
 
     /**********************
@@ -619,7 +624,7 @@
       dqs('#v-left').textContent = Math.max(0, voterState.limit - totalAllocated());
     }
 
-    // Запись голоса: КАЖДЫЙ вариант — отдельный узел; submitted — отдельно (устойчивый CRDT)
+    // Запись голоса
     function submitVote(){
       if(voterState.submitted){ alert('Ваш голос уже учтён'); return; }
       const sum = totalAllocated();
