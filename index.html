@@ -117,7 +117,7 @@ button:hover {
 
 <form id="hotlineForm">
 <label>Тип нарушения</label>
-<select id="violationType" disabled>
+<select id="violationType" readonly>
 <option value="">Выберите вариант</option>
 <option>Недопустимое общение</option>
 <option>Конфликт интересов</option>
@@ -126,7 +126,7 @@ button:hover {
 </select>
 
 <label>Ваша роль в компании</label>
-<select id="role" disabled>
+<select id="role" readonly>
 <option value="">Выберите вариант</option>
 <option>Руководитель</option>
 <option>Сотрудник</option>
@@ -136,7 +136,7 @@ button:hover {
 <label>Опишите нарушение</label>
 <textarea id="description" readonly></textarea>
 
-<button type="submit" id="submitBtn" disabled>Отправить</button>
+<button type="submit" id="submitBtn" readonly>Отправить</button>
 
 <div class="success-message" id="successMessage">
 Обращение успешно отправлено.
@@ -244,3 +244,4 @@ window.onload = () => setTimeout(startAnimation, 1500);
 
 </body>
 </html>
+
