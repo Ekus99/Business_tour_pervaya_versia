@@ -52,6 +52,12 @@ select, textarea {
     font-size: 14px;
     box-sizing: border-box;
     background-color: #fff;
+    transition: box-shadow 0.3s ease;
+}
+
+select:focus, textarea:focus {
+    box-shadow: 0 0 0 3px rgba(42,44,48,0.2);
+    outline: none;
 }
 
 textarea {
@@ -83,113 +89,132 @@ button:hover {
     text-align: center;
 }
 
-/* Визуальный курсор */
-.fake-cursor {
-    width: 16px;
-    height: 16px;
-    background: #2a2c30;
-    border-radius: 50%;
+/* SVG курсор */
+.mouse-cursor {
     position: absolute;
+    width: 24px;
+    height: 24px;
     pointer-events: none;
-    transition: all 0.8s ease;
+    transition: all 0.8s cubic-bezier(.4,0,.2,1);
 }
 </style>
 </head>
 <body>
 
 <div class="container" id="container">
-    <div class="fake-cursor" id="cursor"></div>
 
-    <h1>Горячая Линия ООО "Альфа"</h1>
+<svg class="mouse-cursor" id="cursor" viewBox="0 0 24 24">
+<path fill="#2a2c30" d="M3 2l7 18 2-7 7-2z"/>
+</svg>
 
-    <p>
-        Если вам стало известно о нарушении в компании, вы можете заполнить эту форму.
-        Обращение рассмотрят коллеги из службы внутреннего контроля и комплаенс.
-        Форма полностью анонимная.
-    </p>
+<h1>Горячая Линия ООО "Альфа"</h1>
 
-    <form id="hotlineForm">
-        <label>Тип нарушения</label>
-        <select id="violationType">
-            <option value="">Выберите вариант</option>
-            <option>Недопустимое общение</option>
-            <option>Конфликт интересов</option>
-            <option>Коррупция</option>
-            <option>Иное</option>
-        </select>
+<p>
+Если вам стало известно о нарушении в компании, вы можете заполнить эту форму.
+Обращение рассмотрят коллеги из службы внутреннего контроля и комплаенс.
+Форма полностью анонимная.
+</p>
 
-        <label>Ваша роль в компании</label>
-        <select id="role">
-            <option value="">Выберите вариант</option>
-            <option>Руководитель</option>
-            <option>Сотрудник</option>
-            <option>Клиент</option>
-        </select>
+<form id="hotlineForm">
+<label>Тип нарушения</label>
+<select id="violationType">
+<option value="">Выберите вариант</option>
+<option>Недопустимое общение</option>
+<option>Конфликт интересов</option>
+<option>Коррупция</option>
+<option>Иное</option>
+</select>
 
-        <label>
-            Опишите нарушение
-        </label>
-        <textarea id="description"></textarea>
+<label>Ваша роль в компании</label>
+<select id="role">
+<option value="">Выберите вариант</option>
+<option>Руководитель</option>
+<option>Сотрудник</option>
+<option>Клиент</option>
+</select>
 
-        <button type="submit" id="submitBtn">Отправить</button>
+<label>Опишите нарушение</label>
+<textarea id="description"></textarea>
 
-        <div class="success-message" id="successMessage">
-            Обращение успешно отправлено.
-        </div>
-    </form>
+<button type="submit" id="submitBtn">Отправить</button>
+
+<div class="success-message" id="successMessage">
+Обращение успешно отправлено.
+</div>
+</form>
 </div>
 
 <script>
-const text = `Я -- менеджер отдела сырьевых поставок. Фирма "Поле" - один из наших клиентов. 
+const text = `Я -- менеджер отдела сырьевых поставок. Фирма "Поле" - один из наших клиентов.
 На прошлой неделе руководитель отдела закупок Николаев Андрей Петрович написал мне в мессенджере сообщение следующего содержания:
 
-"В следующем месяце мы планируем строительство нового объекта в г. Волгограде. 
-Мы успешно сотрудничаем с Вашей компанией уже 5 лет, и я хотел бы, что наша совместная работа продолжилась. 
-Дело в том, что у нас сменился генеральный директор, и он будет пересматривать всех действующих партнеров. 
-Я бы мог на него повлиять, но за это хотел бы получить 5 процентов от стоимости будущего контракта. 
+"В следующем месяце мы планируем строительство нового объекта в г. Волгограде.
+Мы успешно сотрудничаем с Вашей компанией уже 5 лет, и я хотел бы, чтобы наша совместная работа продолжилась.
+Дело в том, что у нас сменился генеральный директор, и он будет пересматривать всех действующих партнеров.
+Я бы мог на него повлиять, но за это хотел бы получить 5 процентов от стоимости будущего контракта.
 Готов обсуждать условия"
 
-Данное предложение кажется мне незаконным. 
+Данное предложение кажется мне незаконным.
 Просьба провести проверку и разъяснить отделу, как действовать в такой ситуации.`;
 
+const cursor = document.getElementById("cursor");
 const violation = document.getElementById("violationType");
 const role = document.getElementById("role");
 const description = document.getElementById("description");
-const cursor = document.getElementById("cursor");
 const submitBtn = document.getElementById("submitBtn");
 const successMessage = document.getElementById("successMessage");
 
-function moveCursorTo(element) {
-    const rect = element.getBoundingClientRect();
+function moveCursorTo(el) {
+    const rect = el.getBoundingClientRect();
     const containerRect = document.getElementById("container").getBoundingClientRect();
-
-    cursor.style.left = (rect.left - containerRect.left + rect.width / 2) + "px";
-    cursor.style.top = (rect.top - containerRect.top + rect.height / 2) + "px";
+    cursor.style.left = (rect.left - containerRect.left + rect.width/2) + "px";
+    cursor.style.top = (rect.top - containerRect.top + rect.height/2) + "px";
 }
 
-function typeText(text, i = 0) {
+function humanDelay(char) {
+    if (char === "." || char === "!" || char === "?") return 600;
+    if (char === "," ) return 350;
+    if (char === "\n") return 500;
+    return 40 + Math.random() * 80;
+}
+
+function typeText(i = 0) {
     if (i < text.length) {
-        description.value += text.charAt(i);
-        setTimeout(() => typeText(text, i + 1), 15);
+        const char = text.charAt(i);
+        description.value += char;
+        setTimeout(() => typeText(i+1), humanDelay(char));
     } else {
-        setTimeout(clickSubmit, 10000); // 10 секунд ожидания
+        setTimeout(clickSubmit, 10000);
     }
+}
+
+function simulateSelect(selectElement, value) {
+    moveCursorTo(selectElement);
+    selectElement.focus();
+
+    setTimeout(() => {
+        selectElement.size = selectElement.options.length; // раскрываем
+        selectElement.style.background = "#fff";
+    }, 600);
+
+    setTimeout(() => {
+        selectElement.value = value;
+    }, 1500);
+
+    setTimeout(() => {
+        selectElement.size = 1; // закрываем
+    }, 2200);
 }
 
 function clickSubmit() {
     moveCursorTo(submitBtn);
-    setTimeout(() => {
-        submitBtn.click();
-    }, 800);
+    setTimeout(() => submitBtn.click(), 800);
 }
 
-document.getElementById("hotlineForm").addEventListener("submit", function(e) {
+document.getElementById("hotlineForm").addEventListener("submit", function(e){
     e.preventDefault();
     successMessage.style.display = "block";
-
-    setTimeout(() => {
-        resetForm();
-    }, 4000);
+    setTimeout(resetForm, 4000);
 });
 
 function resetForm() {
@@ -201,26 +226,20 @@ function resetForm() {
 }
 
 function startAnimation() {
-    moveCursorTo(violation);
+    simulateSelect(violation, "Коррупция");
+
     setTimeout(() => {
-        violation.value = "Коррупция";
+        simulateSelect(role, "Сотрудник");
+    }, 3000);
 
-        moveCursorTo(role);
-        setTimeout(() => {
-            role.value = "Сотрудник";
-
-            moveCursorTo(description);
-            description.focus();
-            description.value = "";
-            typeText(text);
-        }, 1000);
-
-    }, 1000);
+    setTimeout(() => {
+        moveCursorTo(description);
+        description.focus();
+        typeText();
+    }, 6000);
 }
 
-window.onload = () => {
-    setTimeout(startAnimation, 1500);
-};
+window.onload = () => setTimeout(startAnimation, 1500);
 </script>
 
 </body>
