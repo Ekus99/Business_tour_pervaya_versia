@@ -27,13 +27,42 @@ body {
     position: relative;
 }
 
-.hidden { display: none; }
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
 
-select:disabled,
-textarea:disabled,
-textarea[readonly] {
-    background-color: #f3f3f3;
-    cursor: default;
+p {
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+
+label {
+    font-weight: bold;
+    display: block;
+    margin-bottom: 8px;
+}
+
+select, textarea {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 1px solid #2a2c30;
+    font-size: 14px;
+    box-sizing: border-box;
+    background-color: #fff;
+    transition: box-shadow 0.3s ease;
+}
+
+select:focus, textarea:focus {
+    box-shadow: 0 0 0 3px rgba(42,44,48,0.2);
+    outline: none;
+}
+
+textarea {
+    min-height: 150px;
+    resize: vertical;
 }
 
 button {
@@ -48,20 +77,9 @@ button {
     transition: 0.3s;
 }
 
-button:hover { opacity: 0.9; }
-
-select, textarea {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 20px;
-    border-radius: 8px;
-    border: 1px solid #2a2c30;
-    font-size: 14px;
-    box-sizing: border-box;
-    background-color: #fff;
+button:hover {
+    opacity: 0.9;
 }
-
-textarea { min-height: 150px; }
 
 .success-message {
     display: none;
@@ -71,13 +89,13 @@ textarea { min-height: 150px; }
     text-align: center;
 }
 
+/* SVG курсор */
 .mouse-cursor {
     position: absolute;
     width: 24px;
     height: 24px;
     pointer-events: none;
     transition: all 0.8s cubic-bezier(.4,0,.2,1);
-    display: none;
 }
 </style>
 </head>
@@ -88,10 +106,6 @@ textarea { min-height: 150px; }
 <svg class="mouse-cursor" id="cursor" viewBox="0 0 24 24">
 <path fill="#2a2c30" d="M3 2l7 18 2-7 7-2z"/>
 </svg>
-
-<button id="startDemo">Запустить демонстрацию</button>
-
-<div id="formWrapper" class="hidden">
 
 <h1>Горячая Линия ООО "Альфа"</h1>
 
@@ -129,12 +143,19 @@ textarea { min-height: 150px; }
 </div>
 </form>
 </div>
-</div>
 
 <script>
-const text = `Я -- менеджер отдела сырьевых поставок...
+const text = `Я -- менеджер отдела сырьевых поставок. Фирма "Поле" - один из наших клиентов.
+На прошлой неделе руководитель отдела закупок Николаев Андрей Петрович написал мне в мессенджере сообщение следующего содержания:
+
+"В следующем месяце мы планируем строительство нового объекта в г. Волгограде.
+Мы успешно сотрудничаем с Вашей компанией уже 5 лет, и я хотел бы, чтобы наша совместная работа продолжилась.
+Дело в том, что у нас сменился генеральный директор, и он будет пересматривать всех действующих партнеров.
 Я бы мог на него повлиять, но за это хотел бы получить 5 процентов от стоимости будущего контракта.
-Просьба провести проверку.`;
+Готов обсуждать условия"
+
+Данное предложение кажется мне незаконным.
+Просьба провести проверку и разъяснить отделу, как действовать в такой ситуации.`;
 
 const cursor = document.getElementById("cursor");
 const violation = document.getElementById("violationType");
@@ -142,13 +163,12 @@ const role = document.getElementById("role");
 const description = document.getElementById("description");
 const submitBtn = document.getElementById("submitBtn");
 const successMessage = document.getElementById("successMessage");
-const startButton = document.getElementById("startDemo");
-const formWrapper = document.getElementById("formWrapper");
 
 function moveCursorTo(el) {
     const rect = el.getBoundingClientRect();
-    cursor.style.left = rect.left + rect.width/2 + "px";
-    cursor.style.top = rect.top + rect.height/2 + "px";
+    const containerRect = document.getElementById("container").getBoundingClientRect();
+    cursor.style.left = (rect.left - containerRect.left + rect.width/2) + "px";
+    cursor.style.top = (rect.top - containerRect.top + rect.height/2) + "px";
 }
 
 function humanDelay(char) {
@@ -164,23 +184,45 @@ function typeText(i = 0) {
         description.value += char;
         setTimeout(() => typeText(i+1), humanDelay(char));
     } else {
-        setTimeout(clickSubmit, 4000);
+        setTimeout(clickSubmit, 10000);
     }
 }
 
 function simulateSelect(selectElement, value) {
     moveCursorTo(selectElement);
+    selectElement.focus();
+
+    setTimeout(() => {
+        selectElement.size = selectElement.options.length; // раскрываем
+        selectElement.style.background = "#fff";
+    }, 600);
 
     setTimeout(() => {
         selectElement.value = value;
-    }, 800);
+    }, 1500);
+
+    setTimeout(() => {
+        selectElement.size = 1; // закрываем
+    }, 2200);
 }
 
 function clickSubmit() {
     moveCursorTo(submitBtn);
-    setTimeout(() => {
-        successMessage.style.display = "block";
-    }, 800);
+    setTimeout(() => submitBtn.click(), 800);
+}
+
+document.getElementById("hotlineForm").addEventListener("submit", function(e){
+    e.preventDefault();
+    successMessage.style.display = "block";
+    setTimeout(resetForm, 4000);
+});
+
+function resetForm() {
+    violation.value = "";
+    role.value = "";
+    description.value = "";
+    successMessage.style.display = "none";
+    setTimeout(startAnimation, 1500);
 }
 
 function startAnimation() {
@@ -192,16 +234,12 @@ function startAnimation() {
 
     setTimeout(() => {
         moveCursorTo(description);
+        description.focus();
         typeText();
     }, 6000);
 }
 
-startButton.addEventListener("click", () => {
-    startButton.style.display = "none";
-    formWrapper.classList.remove("hidden");
-    cursor.style.display = "block";
-    setTimeout(startAnimation, 800);
-});
+window.onload = () => setTimeout(startAnimation, 1500);
 </script>
 
 </body>
