@@ -1,248 +1,593 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Горячая линия ООО "Альфа"</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Горячая линия · Анимация примера</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
 
-<style>
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background-color: #e6e5e3;
-    color: #2a2c30;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-}
+    body {
+      min-height: 100vh;
+      background: #d9dcd9;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      padding: 16px;
+    }
 
-.container {
-    padding: 40px;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    max-width: 650px;
-    width: 100%;
-    background-color: #ccd5eb;
-    position: relative;
-}
+    /* основной контейнер с относительным позиционированием для курсора */
+    .demo-container {
+      position: relative;
+      width: 100%;
+      max-width: 780px;
+      background-color: #e6e5e3;  /* основной фон формы */
+      border-radius: 32px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15), 0 4px 12px rgba(0,0,0,0.1);
+      padding: 32px 40px;
+      border: 1px solid #ccd5eb;
+    }
 
-h1 {
-    text-align: center;
-    margin-bottom: 20px;
-}
+    /* прозрачный слой-блокировщик поверх формы во время анимации */
+    .animation-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      z-index: 10;
+      display: none;
+      border-radius: 32px;
+    }
+    .demo-container.anim-active .animation-overlay {
+      display: block;
+    }
 
-p {
-    font-size: 14px;
-    margin-bottom: 25px;
-}
+    /* сама форма */
+    .hotline-form {
+      position: relative;
+      z-index: 5;
+      pointer-events: auto;  /* взаимодействие через overlay перехватывается */
+    }
 
-label {
-    font-weight: bold;
-    display: block;
-    margin-bottom: 8px;
-}
+    /* заголовок и текст */
+    h1 {
+      font-size: 2rem;
+      font-weight: 600;
+      color: #2a2c30;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+      border-left: 6px solid #2a2c30;
+      padding-left: 20px;
+    }
 
-select, textarea {
-    width: 100%;
-    padding: 10px;
-    margin-bottom: 20px;
-    border-radius: 8px;
-    border: 1px solid #2a2c30;
-    font-size: 14px;
-    box-sizing: border-box;
-    background-color: #fff;
-    transition: box-shadow 0.3s ease;
-}
+    .intro-text {
+      color: #2a2c30;
+      background: #ccd5eb;   /* бледно-лавандовый блок */
+      padding: 18px 22px;
+      border-radius: 24px;
+      margin: 20px 0 28px 0;
+      font-size: 1rem;
+      line-height: 1.5;
+      font-weight: 400;
+      border: 1px solid #b3c0da;
+      box-shadow: inset 0 1px 3px rgba(42,44,48,0.05);
+    }
 
-select:focus, textarea:focus {
-    box-shadow: 0 0 0 3px rgba(42,44,48,0.2);
-    outline: none;
-}
+    /* поля формы */
+    .field-group {
+      margin-bottom: 28px;
+    }
 
-textarea {
-    min-height: 150px;
-    resize: vertical;
-}
+    label {
+      display: block;
+      font-weight: 500;
+      color: #2a2c30;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+      letter-spacing: 0.3px;
+    }
 
-button {
-    background-color: #2a2c30;
-    color: white;
-    border: none;
-    padding: 12px 20px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 15px;
-    width: 100%;
-    transition: 0.3s;
-}
+    /* кастомный селект */
+    .custom-select {
+      position: relative;
+      width: 100%;
+      background: white;
+      border-radius: 20px;
+      border: 2px solid #ccd5eb;
+      transition: border 0.2s, box-shadow 0.2s;
+      cursor: default;
+    }
+    .custom-select:hover {
+      border-color: #b0bedf;
+    }
 
-button:hover {
-    opacity: 0.9;
-}
+    .select-button {
+      width: 100%;
+      padding: 16px 22px;
+      text-align: left;
+      background: white;
+      border: none;
+      border-radius: 20px;
+      font-size: 1rem;
+      color: #2a2c30;
+      font-weight: 400;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: default;  /* выглядит как обычно, но клик не проходит из-за overlay */
+      outline: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .select-button::after {
+      content: "▾";
+      font-size: 1.4rem;
+      color: #2a2c30;
+      opacity: 0.6;
+      transition: transform 0.2s;
+    }
+    .custom-select.open .select-button::after {
+      transform: rotate(180deg);
+    }
 
-.success-message {
-    display: none;
-    margin-top: 15px;
-    color: green;
-    font-weight: bold;
-    text-align: center;
-}
+    /* выпадающий список */
+    .select-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      width: 100%;
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+      border: 1px solid #ccd5eb;
+      z-index: 100;
+      list-style: none;
+      padding: 8px 0;
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s;
+    }
+    .custom-select.open .select-dropdown {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
 
-/* SVG курсор */
-.mouse-cursor {
-    position: absolute;
-    width: 24px;
-    height: 24px;
-    pointer-events: none;
-    transition: all 0.8s cubic-bezier(.4,0,.2,1);
-}
-</style>
+    .select-dropdown li {
+      padding: 12px 22px;
+      font-size: 1rem;
+      color: #2a2c30;
+      transition: background 0.15s;
+      cursor: default;
+      white-space: nowrap;
+    }
+    .select-dropdown li:hover {
+      background: #ccd5eb;
+    }
+    .select-dropdown li:active {
+      background: #b3c0da;
+    }
+
+    /* текстовое поле */
+    .textarea-wrapper {
+      background: white;
+      border-radius: 24px;
+      border: 2px solid #ccd5eb;
+      transition: border 0.2s, box-shadow 0.2s;
+    }
+    .textarea-wrapper.focused {
+      border-color: #2a2c30;
+      box-shadow: 0 0 0 3px rgba(42,44,48,0.1);
+    }
+
+    .info-hint {
+      font-size: 0.95rem;
+      color: #2a2c30;
+      margin-bottom: 10px;
+      padding: 0 4px;
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
+    textarea {
+      width: 100%;
+      height: 400px;
+      padding: 18px 22px;
+      border: none;
+      background: transparent;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: #2a2c30;
+      resize: vertical;
+      min-height: 180px;
+      outline: none;
+      border-radius: 22px;
+      font-family: inherit;
+    }
+
+    /* кнопка отправить */
+    .submit-btn {
+      background: #2a2c30;
+      border: none;
+      color: white;
+      font-weight: 600;
+      font-size: 1.2rem;
+      padding: 16px 28px;
+      border-radius: 40px;
+      width: 100%;
+      letter-spacing: 0.5px;
+      cursor: default;
+      transition: background 0.2s, transform 0.1s;
+      box-shadow: 0 8px 16px rgba(42,44,48,0.2);
+      margin-top: 16px;
+      border: 2px solid #2a2c30;
+    }
+    .submit-btn:active {
+      transform: scale(0.98);
+    }
+
+    /* кнопка запуска */
+    .trigger-btn {
+      background: #ccd5eb;
+      border: 2px solid #2a2c30;
+      color: #2a2c30;
+      font-weight: 600;
+      font-size: 1.2rem;
+      padding: 14px 28px;
+      border-radius: 60px;
+      margin-bottom: 28px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 0 #2a2c30;
+      width: fit-content;
+    }
+    .trigger-btn:hover {
+      background: #bdc9e6;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 0 #2a2c30;
+    }
+    .trigger-btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #2a2c30;
+    }
+
+    /* КУРСОР */
+    .fake-cursor {
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      z-index: 50;
+      pointer-events: none;
+      transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.1), left 0.3s, top 0.3s;
+      left: 0;
+      top: 0;
+      transform: translate(-50%, -50%);
+      filter: drop-shadow(2px 4px 4px rgba(0,0,0,0.2));
+      display: none;
+    }
+    .demo-container.anim-active .fake-cursor {
+      display: block;
+    }
+
+    .cursor-emoji {
+      font-size: 26px;
+      line-height: 1;
+      display: block;
+      transform: rotate(-5deg);
+    }
+
+    /* эффект клика */
+    .fake-cursor.clicking .cursor-emoji {
+      animation: cursorClick 0.2s ease-out;
+    }
+
+    @keyframes cursorClick {
+      0% { transform: rotate(-5deg) scale(1); }
+      50% { transform: rotate(-5deg) scale(1.4); opacity: 0.8; }
+      100% { transform: rotate(-5deg) scale(1); }
+    }
+  </style>
 </head>
 <body>
+<div class="demo-container" id="demoContainer">
+  <!-- блокирующий слой -->
+  <div class="animation-overlay" id="overlay"></div>
 
-<div class="container" id="container">
+  <!-- курсор -->
+  <div class="fake-cursor" id="cursor">
+    <span class="cursor-emoji">👆</span>
+  </div>
 
-<svg class="mouse-cursor" id="cursor" viewBox="0 0 24 24">
-<path fill="#2a2c30" d="M3 2l7 18 2-7 7-2z"/>
-</svg>
+  <!-- форма -->
+  <div class="hotline-form" id="hotlineForm">
+    <button class="trigger-btn" id="startDemoBtn">▶ Запустить пример</button>
+    <h1>Горячая Линия ООО "Альфа"</h1>
+    <div class="intro-text">
+      Если вам стало известно о нарушении в компании, вы можете заполнить эту форму. Обращение рассмотрят коллеги из службы внутреннего контроля и комплаенс. Форма полностью анонимная, но мы просим использовать ее добросовестно и сообщать только о реальных нарушениях.
+    </div>
 
-<h1>Горячая Линия ООО "Альфа"</h1>
+    <!-- поле 1: тип нарушения -->
+    <div class="field-group">
+      <label>Тип нарушения</label>
+      <div class="custom-select" id="selectViolation">
+        <button class="select-button" type="button" id="violationBtn">Выберите пункт</button>
+        <ul class="select-dropdown">
+          <li data-value="Недопустимое общение">Недопустимое общение</li>
+          <li data-value="Конфликт интересов">Конфликт интересов</li>
+          <li data-value="Коррупция">Коррупция</li>
+          <li data-value="Иное">Иное</li>
+        </ul>
+      </div>
+    </div>
 
-<p>
-Если вам стало известно о нарушении в компании, вы можете заполнить эту форму.
-Обращение рассмотрят коллеги из службы внутреннего контроля и комплаенс.
-Форма полностью анонимная.
-</p>
+    <!-- поле 2: роль -->
+    <div class="field-group">
+      <label>Ваша роль в компании</label>
+      <div class="custom-select" id="selectRole">
+        <button class="select-button" type="button" id="roleBtn">Выберите роль</button>
+        <ul class="select-dropdown">
+          <li data-value="Руководитель">Руководитель</li>
+          <li data-value="Сотрудник">Сотрудник</li>
+          <li data-value="Клиент">Клиент</li>
+        </ul>
+      </div>
+    </div>
 
-<form id="hotlineForm">
-<label>Тип нарушения</label>
-<select id="violationType" readonly>
-<option value="">Выберите вариант</option>
-<option>Недопустимое общение</option>
-<option>Конфликт интересов</option>
-<option>Коррупция</option>
-<option>Иное</option>
-</select>
+    <!-- поле 3: описание нарушения -->
+    <div class="field-group">
+      <div class="info-hint">Опишите нарушение. Расскажите все, что считаете нужным. Помните: чем подробнее ваше обращение, тем быстрее мы сможем разобраться в ситуации.</div>
+      <div class="textarea-wrapper" id="textareaWrapper">
+        <textarea id="messageField" placeholder="Введите текст..." readonly></textarea>
+      </div>
+    </div>
 
-<label>Ваша роль в компании</label>
-<select id="role" readonly>
-<option value="">Выберите вариант</option>
-<option>Руководитель</option>
-<option>Сотрудник</option>
-<option>Клиент</option>
-</select>
-
-<label>Опишите нарушение</label>
-<textarea id="description" readonly></textarea>
-
-<button type="submit" id="submitBtn" disabled>Отправить</button>
-
-<div class="success-message" id="successMessage">
-Обращение успешно отправлено.
-</div>
-</form>
+    <!-- кнопка отправить -->
+    <button class="submit-btn" id="submitBtn" disabled>Отправить</button>
+  </div>
 </div>
 
 <script>
-const text = `Я -- менеджер отдела сырьевых поставок. Фирма "Поле" - один из наших клиентов.
-На прошлой неделе руководитель отдела закупок Николаев Андрей Петрович написал мне в мессенджере сообщение следующего содержания:
+  (function() {
+    // ---------- элементы ----------
+    const container = document.getElementById('demoContainer');
+    const overlay = document.getElementById('overlay');
+    const cursor = document.getElementById('cursor');
+    const startBtn = document.getElementById('startDemoBtn');
 
-"В следующем месяце мы планируем строительство нового объекта в г. Волгограде.
-Мы успешно сотрудничаем с Вашей компанией уже 5 лет, и я хотел бы, чтобы наша совместная работа продолжилась.
-Дело в том, что у нас сменился генеральный директор, и он будет пересматривать всех действующих партнеров.
-Я бы мог на него повлиять, но за это хотел бы получить 5 процентов от стоимости будущего контракта.
-Готов обсуждать условия"
+    // селекты
+    const violationSelect = document.getElementById('selectViolation');
+    const roleSelect = document.getElementById('selectRole');
+    const violationBtn = document.getElementById('violationBtn');
+    const roleBtn = document.getElementById('roleBtn');
+    const violationDropdown = violationSelect.querySelector('.select-dropdown');
+    const roleDropdown = roleSelect.querySelector('.select-dropdown');
+    const violationItems = violationDropdown.querySelectorAll('li');
+    const roleItems = roleDropdown.querySelectorAll('li');
 
-Данное предложение кажется мне незаконным.
-Просьба провести проверку и разъяснить отделу, как действовать в такой ситуации.`;
+    // текстовое поле
+    const textarea = document.getElementById('messageField');
+    const textareaWrapper = document.getElementById('textareaWrapper');
+    const submitButton = document.getElementById('submitBtn');
 
-const cursor = document.getElementById("cursor");
-const violation = document.getElementById("violationType");
-const role = document.getElementById("role");
-const description = document.getElementById("description");
-const submitBtn = document.getElementById("submitBtn");
-const successMessage = document.getElementById("successMessage");
+    // ---------- переменные анимации ----------
+    let activeTimers = [];
+    let currentAnimationActive = false;
+    let typeInterval = null;
 
-function moveCursorTo(el) {
-    const rect = el.getBoundingClientRect();
-    const containerRect = document.getElementById("container").getBoundingClientRect();
-    cursor.style.left = (rect.left - containerRect.left + rect.width/2) + "px";
-    cursor.style.top = (rect.top - containerRect.top + rect.height/2) + "px";
-}
-
-function humanDelay(char) {
-    if (char === "." || char === "!" || char === "?") return 600;
-    if (char === "," ) return 350;
-    if (char === "\n") return 500;
-    return 40 + Math.random() * 80;
-}
-
-function typeText(i = 0) {
-    if (i < text.length) {
-        const char = text.charAt(i);
-        description.value += char;
-        setTimeout(() => typeText(i+1), humanDelay(char));
-    } else {
-        setTimeout(clickSubmit, 10000);
+    // ---------- вспомогательные функции ----------
+    function clearAllTimers() {
+      activeTimers.forEach(t => clearTimeout(t));
+      activeTimers = [];
+      if (typeInterval) {
+        clearInterval(typeInterval);
+        typeInterval = null;
+      }
     }
-}
 
-function simulateSelect(selectElement, value) {
-    moveCursorTo(selectElement);
-    selectElement.focus();
+    function sleep(ms) {
+      return new Promise(resolve => {
+        const timer = setTimeout(resolve, ms);
+        activeTimers.push(timer);
+      });
+    }
 
-    setTimeout(() => {
-        selectElement.size = selectElement.options.length; // раскрываем
-        selectElement.style.background = "#fff";
-    }, 600);
+    // ---------- состояние селектов (программное управление) ----------
+    function closeAllSelects() {
+      violationSelect.classList.remove('open');
+      roleSelect.classList.remove('open');
+    }
 
-    setTimeout(() => {
-        selectElement.value = value;
-    }, 1500);
+    // открыть определённый селект
+    function openSelect(selectEl) {
+      closeAllSelects();
+      selectEl.classList.add('open');
+    }
 
-    setTimeout(() => {
-        selectElement.size = 1; // закрываем
-    }, 2200);
-}
+    function closeSelect(selectEl) {
+      selectEl.classList.remove('open');
+    }
 
-function clickSubmit() {
-    moveCursorTo(submitBtn);
-    setTimeout(() => submitBtn.click(), 800);
-}
+    // выбрать пункт в селекте по тексту (точное совпадение)
+    function selectOption(selectEl, optionText) {
+      const btn = selectEl.querySelector('.select-button');
+      const items = selectEl.querySelectorAll('.select-dropdown li');
+      for (let item of items) {
+        if (item.innerText.trim() === optionText) {
+          btn.innerText = optionText; // меняем текст кнопки
+          break;
+        }
+      }
+      closeSelect(selectEl);
+    }
 
-document.getElementById("hotlineForm").addEventListener("submit", function(e){
-    e.preventDefault();
-    successMessage.style.display = "block";
-    setTimeout(resetForm, 4000);
-});
+    // ---------- сброс формы в исходное состояние ----------
+    function resetForm() {
+      // сброс селектов
+      violationBtn.innerText = 'Выберите пункт';
+      roleBtn.innerText = 'Выберите роль';
+      closeAllSelects();
+      // очистка textarea
+      textarea.value = '';
+      textareaWrapper.classList.remove('focused');
+      // внешний вид кнопки
+      submitButton.disabled = true; // оставляем disabled (неактивна для пользователя)
+    }
 
-function resetForm() {
-    violation.value = "";
-    role.value = "";
-    description.value = "";
-    successMessage.style.display = "none";
-    setTimeout(startAnimation, 1500);
-}
+    // ---------- перемещение курсора к элементу ----------
+    function moveCursorToElement(element, offsetX = 0, offsetY = 0) {
+      return new Promise(resolve => {
+        if (!element) return resolve();
+        const rect = element.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
 
-function startAnimation() {
-    simulateSelect(violation, "Коррупция");
+        // координаты относительно контейнера
+        let left = rect.left + rect.width / 2 + offsetX - containerRect.left;
+        let top = rect.top + rect.height / 2 + offsetY - containerRect.top;
 
-    setTimeout(() => {
-        simulateSelect(role, "Сотрудник");
-    }, 3000);
+        // небольшое ограничение, чтобы курсор не убегал за границы
+        left = Math.max(10, Math.min(containerRect.width - 10, left));
+        top = Math.max(10, Math.min(containerRect.height - 10, top));
 
-    setTimeout(() => {
-        moveCursorTo(description);
-        description.focus();
-        typeText();
-    }, 6000);
-}
+        cursor.style.left = left + 'px';
+        cursor.style.top = top + 'px';
 
-window.onload = () => setTimeout(startAnimation, 1500);
+        // даём время на анимацию перемещения
+        setTimeout(resolve, 350);
+      });
+    }
+
+    // эффект клика
+    async function clickEffect() {
+      cursor.classList.add('clicking');
+      await sleep(150);
+      cursor.classList.remove('clicking');
+    }
+
+    // ---------- печать текста (с эффектом) ----------
+    function typeTextSlowly(element, fullText, onFinish) {
+      let index = 0;
+      element.value = '';
+      const words = fullText.split('');
+      typeInterval = setInterval(() => {
+        if (index < words.length) {
+          element.value += words[index];
+          index++;
+        } else {
+          clearInterval(typeInterval);
+          typeInterval = null;
+          if (onFinish) onFinish();
+        }
+      }, 45); // медленно, около 22 симв/сек (≈ 600 символов за 27 сек)
+    }
+
+    // ---------- остановка всей анимации ----------
+    function stopAnimation() {
+      currentAnimationActive = false;
+      clearAllTimers();
+      closeAllSelects();
+      container.classList.remove('anim-active');
+      cursor.style.display = 'none';
+      resetForm();
+    }
+
+    // ---------- ЗАПУСК АНИМАЦИИ ----------
+    async function startAnimation() {
+      stopAnimation(); // сброс предыдущей
+
+      currentAnimationActive = true;
+      container.classList.add('anim-active');
+      cursor.style.display = 'block';
+
+      // устанавливаем начальную позицию курсора (левый верх)
+      await moveCursorToElement(startBtn, -20, 20); // стартуем около кнопки
+      await sleep(400);
+
+      // ----- 1. поле "Тип нарушения" (Коррупция) -----
+      await moveCursorToElement(violationBtn);
+      await clickEffect();
+      openSelect(violationSelect);
+      await sleep(600); // видим открытие
+      // выбираем пункт "Коррупция"
+      selectOption(violationSelect, 'Коррупция');
+      await sleep(400);
+      closeSelect(violationSelect);
+      await sleep(3000); // пауза 3 сек
+
+      // ----- 2. поле "Роль" (Сотрудник) -----
+      await moveCursorToElement(roleBtn);
+      await clickEffect();
+      openSelect(roleSelect);
+      await sleep(600);
+      selectOption(roleSelect, 'Сотрудник');
+      await sleep(400);
+      closeSelect(roleSelect);
+      await sleep(3000); // пауза 3 сек
+
+      // ----- 3. текстовая область (подсветка + печать) -----
+      await moveCursorToElement(textarea);
+      await clickEffect();
+      textareaWrapper.classList.add('focused');
+      await sleep(500);
+
+      // длинный текст для печати
+      const longMessage = `Я -- менеджер отдела сырьевых поставок. Фирма "Поле" - один из наших клиентов. На прошлой неделе руководитель отдела закупок Николаев Андрей Петрович написал мне в мессенджере сообщение следующего содержания: 
+"В следующем месяце мы планируем строительство нового объекта в г. Волгограде. Мы успешно сотрудничаем с Вашей компанией уже 5 лет, и я хотел бы, что наша совместная работа продолжилась. Дело в том, что у нас сменился генеральный директор, и он будет пересматривать всех действующих партнеров. Я бы мог на него повлиять, но за это хотел бы получить 5 процентов от стоимости будущего контракта. Готов обсуждать условия" 
+Данное предложение кажется мне незаконным. Просьба провести проверку и разъяснить отделу, как действовать в такой ситуации.`;
+
+      // запускаем печать (она асинхронная, не блокируем через await, но дожидаемся окончания)
+      await new Promise((resolve) => {
+        typeTextSlowly(textarea, longMessage, () => {
+          resolve();
+        });
+      });
+
+      // печать завершена
+      await sleep(4000); // ждём 4 секунды после печати
+
+      // ----- 4. нажатие кнопки "Отправить" -----
+      await moveCursorToElement(submitButton);
+      await clickEffect();
+      // имитация клика: можно добавить изменение цвета
+      submitButton.style.background = '#ccd5eb';
+      submitButton.style.color = '#2a2c30';
+      await sleep(300);
+      submitButton.style.background = '#2a2c30';
+      submitButton.style.color = 'white';
+
+      // финал: через пару секунд убираем активный режим (оставляем форму заполненной)
+      await sleep(1000);
+      if (currentAnimationActive) {
+        container.classList.remove('anim-active');
+        cursor.style.display = 'none';
+      }
+    }
+
+    // ---------- обработчик на кнопку запуска ----------
+    startBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      startAnimation();
+    });
+
+    // принудительно сбрасываем форму при загрузке
+    resetForm();
+
+    // дополнительно: заблокировать любые клики внутри формы во время анимации через overlay
+    // ( overlay уже перекрывает )
+    // но также сделаем поля визуально неактивными (pointer-events не трогаем, т.к. overlay сверху)
+    // Убираем стандартный фокус с tab
+    textarea.setAttribute('readonly', true);
+    submitButton.disabled = true;
+
+    // также добавим лёгкую защиту от случайного запуска множества анимаций
+  })();
 </script>
-
 </body>
 </html>
-
-
